@@ -1,0 +1,16 @@
+add-symbol-file ../target/bootsector.elf 0x7c00
+add-symbol-file ../target/payload_16.elf 0x500
+add-symbol-file ../target/payload_64.elf 0x700
+target remote localhost:1235
+#br *0x7c00
+#br payload_16
+#br long_mode
+#br payload_64
+#br isr_dummy
+#br forth
+#br forth.asm:647
+br _magic_breakpoint
+br read_char.keyboard
+
+focus cmd
+c

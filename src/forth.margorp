@@ -1,0 +1,190 @@
+cls
+
+: 1+ 1 + ;
+: over >r dup r> swap ;
+: 2dup over over ;
+: 2drop drop drop ;
+
+: cells 8 * ;
+: +! dup >r  @ +  r> ! ;
+
+: allot dp +! ;
+: here dp @ ;
+: , here !  | 1 cells | literal allot ;
+
+: constant >r : r> postpone literal postpone ; ;
+: variable here 0 , constant ;
+
+: compile-only ; immediate
+
+: branch> here 0 , ;
+: >branch here swap ! ;
+: if postpone 0branch branch> ; immediate compile-only
+: then >branch ; immediate compile-only
+: endif postpone then ; immediate
+: else >r postpone branch branch> r> >branch ; immediate compile-only
+: branch< here ;
+: <branch , ;
+: begin branch< ; immediate compile-only
+: again postpone branch <branch ; immediate compile-only
+: until postpone 0branch <branch ; immediate compile-only
+: while postpone 0branch branch> swap ; immediate compile-only
+: repeat postpone branch <branch >branch ; immediate compile-only
+: do
+    postpone swap
+    postpone begin
+    postpone >r
+    postpone >r
+    ; immediate compile-only
+: loop
+    postpone r>
+    postpone 1+
+    postpone r>
+    postpone 2dup
+    postpone =
+    postpone until
+    postpone 2drop
+    ; immediate compile-only
+
+
+: bl 32 ;
+: cr 10 emit ;
+: space bl emit ;
+: char bl begin drop key dup bl > until ;
+: [char] char postpone literal ; immediate compile-only
+: ( begin key [char] ) = until ; immediate
+
+(
+TODO: : immediate last-word set-immediate
+TODO: Instead of compile-only definitions do it Able Forth way:
+    - literals implemented as parsing words # $ % and & for dec, hex, bin and oct respectively.
+    - compiler only design like freeforth: words are always compiled, unless backquote at the end
+)
+
+
+
+( simple-tester, a testing tool for embedded Forth systems, Ulrich Hoffmann and Andrew Read )
+: hash ( x1 h0 -- h1 ) swap 1 + xor ;
+: hash-n ( x1 x2 ... xn n -- h )
+    0 >r
+    begin
+        dup 0 >
+    while
+        swap r> hash >r
+        1 -
+    repeat
+    drop r>
+    ;
+variable Tdepth ;
+variable Tcount ;
+: test-fail
+    cls
+    Tcount @ .
+    bye
+    ;
+: T{ ( -- )
+    Tcount @ 1 + Tcount !
+    depth Tdepth !
+    ;
+: }T ( y1 y2 ... yn -- hy )
+    depth Tdepth @ - ( y1 y2 ... yn Ny )
+    hash-n           ( hy )
+    depth Tdepth !   ( hy ) ;
+: == ( hy x1 x2 ... xn -- )
+    depth Tdepth @ -      ( hy x1 x2 .. xn Nx )
+    hash-n                ( hy hx )
+    = 0 = if test-fail then ;
+
+T{ 1 2 drop }T 1 ==
+T{ 1 2 + }T 3 ==
+T{ 1 dup }T 1 1 ==
+T{ : test 0 if 111 then ; test }T == ( TODO: Change after removing compile-only definitions )
+T{ : test 2 if 111 then ; test }T 111 ==
+T{ : test 0 if 1111 else 2222 endif ; test }T 2222 ==
+T{ : test 3 if 1111 else 2222 endif ; test }T 1111 ==
+T{ : test 0 begin 1 + dup 5 = until ; test }T 1 2 3 4 5 ==
+T{ : test [char]  ) ; test }T 41 ==
+
+
+
+( arithmetics )
+: 0> ( n -- b ) 0 > ;
+T{ 1 0> }T 1 ==
+T{ 0 0> }T 0 ==
+
+: 2* ( n -- n*n ) dup + ;
+T{ 123 2* }T 246 ==
+T{ 5 ' 2* execute }T 10 ==
+
+
+
+( screen printing )
+: spaces ( n -- ) begin dup 0> while space 1 - repeat drop ;
+
+: ."
+    begin
+        key dup [char] " !=
+    while
+        postpone literal
+        postpone emit
+    repeat
+    drop
+    ; immediate compile-only
+
+: .S
+    ." { "
+    depth dup
+    begin
+        dup 0 >
+    while
+        >r >r dup . r> swap r> swap >r
+        bl emit
+        1 -
+    repeat
+    drop
+    begin
+        dup 0 >
+    while
+        r> swap
+        1 -
+    repeat
+    drop
+    ." } " cr
+    ;
+
+( TODO: s" push string )
+
+
+
+( Book "Starting FORTH" by Leo Brodie )
+
+( chapter 1 )
+cls
+: star 42 emit ;
+: margin cr 30 spaces ;
+: blip margin star ;
+: stars 0 do star loop ;
+: bar margin 5 stars ;
+: F bar blip bar blip blip cr ;
+F
+: greet ." HELLO, I SPEAK FORTH" cr ;
+greet
+
+( chapter 2 )
+
+20 4 / . cr
+: yards>in 36 * ;
+( TODO: ." should not be compile-only )
+: convert dup . ."  yards = " yards>in . ."  in" cr ;
+10 convert
+: 5#sum + + + + ;
+17 20 132 3 9 5#sum .
+22 4 /mod . .
+10 20 30 40 .S
+drop drop .S
+drop .S
+drop .S
+
+( chapter 3 )
+
+( ... )

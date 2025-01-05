@@ -1,0 +1,13 @@
+cpu: model=core2_penryn_t9600, count=1, ips=50000000, reset_on_triple_fault=1, ignore_bad_msrs=1, msrs="msrs.def"
+clock: sync=slowdown
+megs: 256
+
+#floppya: 1_44="/home/sszczyrb/Repos/margorp/target/disk.bin", status=inserted
+#boot: a
+boot: c
+ata0: enabled=1, ioaddr1=0x1f0, ioaddr2=0x3f0, irq=14
+ata0-master: type=disk, path="/home/sszczyrb/Repos/margorp/target/disk.bin", mode=flat, cylinders=0, heads=0, spt=0, model="Generic 1234", biosdetect=auto, translation=auto
+panic: action=ask
+
+display_library: x, options="gui_debug"
+magic_break: enabled=1
