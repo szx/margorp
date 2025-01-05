@@ -642,9 +642,18 @@ dp: dq fetch
     ret
 
 
+db 'latest'
+db 6
+latest: dq dp
+    db 0
+    mov rax, dictionary
+    push_param rax
+    ret
+
+
 db ':' ; Define the start of a subroutine.
 db 1
-colon: dq dp
+colon: dq latest
     db 0
     call read_word
 

@@ -14,6 +14,7 @@ cls
 
 : constant >r : r> postpone literal postpone ; ;
 : variable here 0 , constant ;
+: marker latest @ : postpone literal postpone latest postpone ! postpone ; ;
 
 : compile-only ; immediate
 
@@ -75,8 +76,8 @@ TODO: Instead of compile-only definitions do it Able Forth way:
     repeat
     drop r>
     ;
-variable Tdepth ;
-variable Tcount ;
+variable Tdepth
+variable Tcount
 : test-fail
     cls
     Tcount @ .
@@ -105,7 +106,15 @@ T{ : test 3 if 1111 else 2222 endif ; test }T 1111 ==
 T{ : test 0 begin 1 + dup 5 = until ; test }T 1 2 3 4 5 ==
 T{ : test [char]  ) ; test }T 41 ==
 
-
+marker -work
+: foo 1 ;
+marker -work
+T{ foo }T 1 ==
+: foo 2 ;
+( T{ foo }T 2 == )
+-work
+T{ foo }T 1 ==
+-work
 
 ( arithmetics )
 : 0> ( n -- b ) 0 > ;
@@ -155,6 +164,7 @@ T{ 5 ' 2* execute }T 10 ==
 ( TODO: s" push string )
 
 
+( SCRATCHPAD BELOW, WILL BE REMOVED )
 
 ( Book "Starting FORTH" by Leo Brodie )
 
