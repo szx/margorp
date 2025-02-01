@@ -7,7 +7,7 @@ trap popd EXIT
 
 . simulate_input.sh &
 
-qemu-system-x86_64 -name "margorp" -monitor unix:/tmp/qemu-monitor-socket,server,nowait -no-reboot -machine q35           \
+qemu-system-x86_64 -name "margorp" -monitor unix:/tmp/qemu-monitor-socket,server,nowait -no-reboot -no-shutdown -machine q35           \
     -drive if=none,id=usbstick,format=raw,file=../target/disk.bin   \
     -usb                                                            \
     -device nec-usb-xhci,id=xhci                                    \

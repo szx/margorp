@@ -88,9 +88,9 @@ fn handle_write(is_running: Arc<AtomicBool>, stream: UnixStream) -> Result<()> {
             '"' => "shift-apostrophe".into(),
             _ => todo!("c: '{c}'"),
         };
-        stream.write_all(format!("sendkey {c}\n").as_bytes())?;
+        stream.write_all(format!("sendkey {c} 10\n").as_bytes())?;
         stream.flush()?;
-        thread::sleep(Duration::new(0, 100 * 1000000));
+        thread::sleep(Duration::new(0, 20 * 1000000));
     }
 
     stream.write_all("sendkey spc\n".as_bytes())?;

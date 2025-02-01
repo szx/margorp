@@ -212,15 +212,6 @@ drop .S
 23 ?day
 32 ?day
 
-( TODO: Make sure dictionary is not overwriting script? )
-                                                                   
-                                                                   
-                                                                   
-                                                                   
-                                                                   
-                                                                   
-                                                                   
-
 : /check
     dup 0= if
         ." invalid" drop

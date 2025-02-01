@@ -82,15 +82,23 @@ systimer_ticks: dq 0
 
 isr_33: ; keyboard
     push rax
-    xor rax, rax
+    push rdx
     in al, 0x60 ; Read byte.
+
     ; xchg bx, bx ; magic breakpoint
-    mov [keyboard_scancode], al
+    xor rdx, rdx
+    mov dl, byte [keyboard_write_head]
+    mov byte [keyboard_scancodes + rdx], al
+    inc byte [keyboard_write_head]
+
     mov al, PIC_EOI
     out PIC1_COMMAND, al
+    pop rdx
     pop rax
     iretq
-keyboard_scancode: dq 0
+keyboard_scancodes: times 256 db 0
+keyboard_read_head: db 0
+keyboard_write_head: db 0
 
 %assign i 0
 %rep 256

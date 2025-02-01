@@ -136,20 +136,18 @@ print_scroll:
 %define LEFT_SHIFT_ASCII 1
 read_char:
     ; return al: char
-    mov rsi, [script_ptr]
-    mov al, byte [rsi]
-    test al, al
-    jz .keyboard
-    inc qword [script_ptr]
-    ret
-.keyboard:
     mov rsi, scancode_to_ascii
 .loop:
-    ; check if MSB is 1 (released)
     xor rbx, rbx
-    mov bl, byte [keyboard_scancode]
+    mov bl, byte [keyboard_read_head]
+    mov al, byte [keyboard_write_head]
+    cmp bl, al
+    je .loop ; no key
+    mov bl, byte [keyboard_scancodes + rbx]
+    inc byte [keyboard_read_head]
+
     bt bx, 7
-    jc .loop
+    jc .loop ; MSB is 1 (released)
     test bl, bl
     jz .loop
     xor rax, rax
@@ -164,7 +162,6 @@ read_char:
     jmp .loop
 .end:
     ; xchg bx, bx ; magic breakpoint
-    mov byte [keyboard_scancode], 0xFF
     ret
 scancode_to_ascii:
 db 0, 0, '1', '2', '3', '4', '5', '6'
@@ -190,7 +187,7 @@ db '&', '*', '(', ')', '_', '+', `\b`, `\t`
 db 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I'
 db 'O', 'P', '{', '}', `\n`, 0, 'A', 'S'
 db 'D', 'F', 'G', 'H', 'J', 'K', 'L', ':'
-db 39, 96, LEFT_SHIFT_ASCII, '|', 'Z', 'X', 'C', 'V'
+db 34, 96, LEFT_SHIFT_ASCII, '|', 'Z', 'X', 'C', 'V'
 db 'B', 'N', 'M', '<', '>', '?', 0, '*'
 db 0, ' ', 0, 0, 0, 0, 0, 0
 db 0, 0, 0, 0, 0, 0, 0, 0
@@ -869,10 +866,4 @@ cur_word_str: times 0xFF db 0
 interpreter_mode: db 0
 rest_of_memory_ptr: dq rest_of_memory
 
-script_ptr: dq script
-
 rest_of_memory:
-
-times 0xFFF db 0 ; TODO: Make sure enough space reserved to not overwrite script while read
-
-script: ; TODO: Remove script (takes too much memory), use expect to prepare bin.
