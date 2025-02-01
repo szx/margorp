@@ -1,6 +1,7 @@
 cls
 
 : 1+ 1 + ;
+: 0= 0 = ;
 : over >r dup r> swap ;
 : 2dup over over ;
 : 2drop drop drop ;
@@ -196,5 +197,39 @@ drop .S
 drop .S
 
 ( chapter 3 )
+
+( TODO: list/load/flush words + editor )
+
+( chapter 4 )
+
+: ?full 12 = if ." It's full!" then ;
+11 ?full
+12 ?full
+: ?too-hot 220 > if ." DANGER - REDUCE HEAT" then ;
+290 ?too-hot
+120 ?too-hot
+: ?day 32 < if ." looks good" else ." no way" then ;
+23 ?day
+32 ?day
+
+( TODO: Make sure dictionary is not overwriting script? )
+                                                                   
+                                                                   
+                                                                   
+                                                                   
+                                                                   
+                                                                   
+                                                                   
+
+: /check
+    dup 0= if
+        ." invalid" drop
+    else
+        /
+    then
+;
+23 3 /check .
+23 0 /check
+
 
 ( ... )

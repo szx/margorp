@@ -19,7 +19,7 @@ ld -Ttext=0x700 --oformat binary -o ../target/payload_64.bin ../target/payload_6
 
 cd ../tools
 
-printf "\n\0" | cat ../src/forth.margorp - > ../target/forth.margorp
+printf "cls \n\0" | cat - > ../target/forth.margorp
 
 cat ../target/bootsector.bin ../target/payload_16.bin ../target/payload_64.bin ../target/forth.margorp > ../target/disk.bin
 truncate -s1032192 ../target/disk.bin

@@ -190,7 +190,7 @@ db '&', '*', '(', ')', '_', '+', `\b`, `\t`
 db 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I'
 db 'O', 'P', '{', '}', `\n`, 0, 'A', 'S'
 db 'D', 'F', 'G', 'H', 'J', 'K', 'L', ':'
-db 39, 96, LEFT_SHIFT_ASCII, 92, 'Z', 'X', 'C', 'V'
+db 39, 96, LEFT_SHIFT_ASCII, '|', 'Z', 'X', 'C', 'V'
 db 'B', 'N', 'M', '<', '>', '?', 0, '*'
 db 0, ' ', 0, 0, 0, 0, 0, 0
 db 0, 0, 0, 0, 0, 0, 0, 0
@@ -398,6 +398,7 @@ _xor: dq _div_mod
     push_param r14
     ret
 
+; logical start
 
 db '='
 db 1
@@ -475,6 +476,8 @@ _ge: dq _le
     setge al
     push_param rax
     ret
+
+; logical end
 
 
 db 'emit'
@@ -858,7 +861,7 @@ write: dq _switch
     ret
 
 
-; TODO: more complex words
+; TODO: simplify, something like: http://tumbleforth.hardcoded.net/01-duskcc/09-dusktillc.html
 
 dictionary: dq write
 cur_word: db 0
@@ -872,4 +875,4 @@ rest_of_memory:
 
 times 0xFFF db 0 ; TODO: Make sure enough space reserved to not overwrite script while read
 
-script:
+script: ; TODO: Remove script (takes too much memory), use expect to prepare bin.

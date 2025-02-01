@@ -33,25 +33,36 @@ payload_16:
     mov di, PAGE_TABLES_ADDR
 
     ; Build PML4 (Page Map Level 4).
-    lea eax, [di + 0x1000]
+    lea eax, [di + PAGE_SIZE]
     or eax, PAGE_PRESENT | PAGE_WRITE
     mov [di], eax
 
     ; Build PDPT (Page Directory Pointer Table).
-    lea eax, [di + 0x2000]
+    lea eax, [di + 2*PAGE_SIZE]
     or eax, PAGE_PRESENT | PAGE_WRITE
-    mov [di + 0x1000], eax
+    mov [di + PAGE_SIZE], eax
     
-    ; Build PD (Page Directory).
-    lea eax, [di + 0x3000]
-    or eax, PAGE_PRESENT | PAGE_WRITE
-    mov [di + 0x2000], eax
+    ; TODO Map more than first 6 Mb memory.
 
+    ; Build PD (Page Directory).
+    lea eax, [di + 3*PAGE_SIZE]
+    or eax, PAGE_PRESENT | PAGE_WRITE
+    mov [di + 2*PAGE_SIZE], eax
+    
+    lea eax, [di + 3*PAGE_SIZE + PAGE_SIZE]
+    or eax, PAGE_PRESENT | PAGE_WRITE
+    mov [di + 2*PAGE_SIZE + 8], eax
+
+    lea eax, [di + 3*PAGE_SIZE + 2*PAGE_SIZE]
+    or eax, PAGE_PRESENT | PAGE_WRITE
+    mov [di + 2*PAGE_SIZE + 2*8], eax
+    ; TODO: Map more than 4kb memory.
+    
     ; Build the Page Table from Paga Table Entries (PTE).
-    ; Identity mapping 1 Page Table (512 PTE) for first 4Mb of memory.
-    lea di, [di + 0x3000]
+    ; Identity mapping 1 Page Table (512 PTE of 4Kb pages) for first 2Mb of memory.
+    lea di, [di + 3*PAGE_SIZE]
     mov eax, PAGE_PRESENT | PAGE_WRITE 
-    mov ecx, 512
+    mov ecx, 512*3
 .page_table_entry:
     mov [di], eax
     add eax, 0x1000

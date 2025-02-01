@@ -5,9 +5,13 @@ trap popd EXIT
 
 . build.sh
 
-qemu-system-x86_64 -no-reboot -d int,cpu_reset,in_asm,exec -S -gdb "tcp::1235" -machine q35 \
+. simulate_input.sh &
+
+qemu-system-x86_64 -name "margorp" -monitor unix:/tmp/qemu-monitor-socket,server,nowait -no-reboot -machine q35           \
     -drive if=none,id=usbstick,format=raw,file=../target/disk.bin   \
     -usb                                                            \
     -device nec-usb-xhci,id=xhci                                    \
     -device usb-storage,bus=xhci.0,drive=usbstick
     #-hda ../target/disk.bin
+    # -S -gdb "tcp::1235" -d int,cpu_reset,in_asm,exec
+    # -display curses
