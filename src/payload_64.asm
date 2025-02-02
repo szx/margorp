@@ -87,18 +87,20 @@ isr_33: ; keyboard
 
     ; xchg bx, bx ; magic breakpoint
     xor rdx, rdx
-    mov dl, byte [keyboard_write_head]
+    mov dx, word [keyboard_write_head]
     mov byte [keyboard_scancodes + rdx], al
-    inc byte [keyboard_write_head]
+    inc rdx
+    and rdx, KEYBOARD_BUFFER_SIZE - 1
+    mov word [keyboard_write_head], dx
 
     mov al, PIC_EOI
     out PIC1_COMMAND, al
     pop rdx
     pop rax
     iretq
-keyboard_scancodes: times 256 db 0
-keyboard_read_head: db 0
-keyboard_write_head: db 0
+keyboard_scancodes: times KEYBOARD_BUFFER_SIZE db 0
+keyboard_read_head: dw 0
+keyboard_write_head: dw 0
 
 %assign i 0
 %rep 256

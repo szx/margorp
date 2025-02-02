@@ -19,3 +19,5 @@
 %define PIC2_COMMAND PIC2
 %define PIC2_DATA (PIC2+1)
 %define PIC_EOI 0x20
+
+%define KEYBOARD_BUFFER_SIZE 0x1000

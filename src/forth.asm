@@ -136,23 +136,28 @@ print_scroll:
 %define LEFT_SHIFT_ASCII 1
 read_char:
     ; return al: char
+    push r12
+    push rbx
     mov rsi, scancode_to_ascii
 .loop:
     xor rbx, rbx
-    mov bl, byte [keyboard_read_head]
-    mov al, byte [keyboard_write_head]
-    cmp bl, al
+    mov bx, word [keyboard_read_head]
+    mov ax, word [keyboard_write_head]
+    cmp bx, ax
     je .loop ; no key
-    mov bl, byte [keyboard_scancodes + rbx]
-    inc byte [keyboard_read_head]
+    xor r12, r12
+    mov r12b, byte [keyboard_scancodes + rbx]
+    inc rbx
+    and rbx, KEYBOARD_BUFFER_SIZE - 1
+    mov word [keyboard_read_head], bx
 
-    bt bx, 7
+    bt r12w, 7
     jc .loop ; MSB is 1 (released)
-    test bl, bl
+    test r12b, r12b
     jz .loop
-    xor rax, rax
 .ascii:
-    mov al, byte [rsi + rbx]
+    xor rax, rax
+    mov al, byte [rsi + r12]
     test al, al
     jz .loop
 
@@ -162,6 +167,8 @@ read_char:
     jmp .loop
 .end:
     ; xchg bx, bx ; magic breakpoint
+    pop rbx
+    pop r12
     ret
 scancode_to_ascii:
 db 0, 0, '1', '2', '3', '4', '5', '6'
