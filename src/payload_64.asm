@@ -83,24 +83,26 @@ systimer_ticks: dq 0
 isr_33: ; keyboard
     push rax
     push rdx
-    in al, 0x60 ; Read byte.
-
-    ; xchg bx, bx ; magic breakpoint
     xor rdx, rdx
-    mov dx, word [keyboard_write_head]
-    mov byte [keyboard_scancodes + rdx], al
+    in al, 0x60 ; Read byte.
+    mov dl, al
+
+
+    mov al, dl
+    ; xchg bx, bx ; magic breakpoint
+    mov rdx, qword [keyboard_write_head]
+    mov byte [KEYBOARD_BUFFER_ADDR + rdx], al
     inc rdx
     and rdx, KEYBOARD_BUFFER_SIZE - 1
-    mov word [keyboard_write_head], dx
+    mov qword [keyboard_write_head], rdx
 
+    pop rdx
     mov al, PIC_EOI
     out PIC1_COMMAND, al
-    pop rdx
     pop rax
     iretq
-keyboard_scancodes: times KEYBOARD_BUFFER_SIZE db 0
-keyboard_read_head: dw 0
-keyboard_write_head: dw 0
+keyboard_read_head: dq 0
+keyboard_write_head: dq 0
 
 %assign i 0
 %rep 256

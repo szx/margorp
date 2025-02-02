@@ -141,15 +141,15 @@ read_char:
     mov rsi, scancode_to_ascii
 .loop:
     xor rbx, rbx
-    mov bx, word [keyboard_read_head]
-    mov ax, word [keyboard_write_head]
-    cmp bx, ax
+    mov rbx, qword [keyboard_read_head]
+    mov rax, qword [keyboard_write_head]
+    cmp rbx, rax
     je .loop ; no key
     xor r12, r12
-    mov r12b, byte [keyboard_scancodes + rbx]
+    mov r12b, byte [KEYBOARD_BUFFER_ADDR + rbx]
     inc rbx
     and rbx, KEYBOARD_BUFFER_SIZE - 1
-    mov word [keyboard_read_head], bx
+    mov qword [keyboard_read_head], rbx
 
     bt r12w, 7
     jc .loop ; MSB is 1 (released)

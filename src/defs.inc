@@ -4,6 +4,15 @@
 %define CODE_SEG 0x8
 %define DATA_SEG 0x10
 
+; TODO: Sane description of memory map.
+; Currently it looks something like this:
+; - PAGE_TABLES_ADDR
+; - kernel code
+; - forth dictionary
+; - KEYBOARD_BUFFER_ADDR
+; - stack at MEM_HIGH_ADDR
+; Also should read memory map from BIOS.
+
 %define PAGE_SIZE 0x1000
 %define PAGE_TABLES_ADDR 0x6000
 %define PAGE_TABLES_SIZE 0x4000
@@ -20,4 +29,5 @@
 %define PIC2_DATA (PIC2+1)
 %define PIC_EOI 0x20
 
+%define KEYBOARD_BUFFER_ADDR 0x100000
 %define KEYBOARD_BUFFER_SIZE 0x1000

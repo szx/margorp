@@ -3,9 +3,9 @@ set -e
 pushd "$(dirname ${BASH_SOURCE:0})"
 trap popd EXIT
 
-. build.sh
+bash build.sh
 
-. simulate_input.sh &
+bash qemu_automation.sh &
 
 qemu-system-x86_64 -name "margorp" -monitor unix:/tmp/qemu-monitor-socket,server,nowait -no-reboot -no-shutdown -machine q35           \
     -drive if=none,id=usbstick,format=raw,file=../target/disk.bin   \

@@ -9,46 +9,60 @@ use std::thread;
 use std::time::Duration;
 
 fn main() -> Result<()> {
-    println!("start");
+    println!("start qemu_automation");
 
     let is_running = Arc::new(AtomicBool::new(true));
+    let is_reading = Arc::new(AtomicBool::new(false));
     let read_stream = UnixStream::connect("/tmp/qemu-monitor-socket")?;
     let write_stream = read_stream.try_clone()?;
 
     thread::scope(|scope| {
         scope.spawn(|| {
-            handle_read(is_running.clone(), read_stream).map_err(|e| {
+            handle_read(is_running.clone(), is_reading.clone(), read_stream).map_err(|e| {
                 is_running.store(false, Ordering::Relaxed);
                 dbg!(e)
             })
         });
         scope.spawn(|| {
-            handle_write(is_running.clone(), write_stream).map_err(|e| {
+            handle_write(is_running.clone(), is_reading.clone(), write_stream).map_err(|e| {
                 is_running.store(false, Ordering::Relaxed);
                 dbg!(e)
             })
         });
     });
 
-    println!("finish");
+    println!("finish qemu_automation");
     Ok(())
 }
 
-fn handle_read(is_running: Arc<AtomicBool>, stream: UnixStream) -> Result<()> {
+fn handle_read(
+    is_running: Arc<AtomicBool>,
+    is_reading: Arc<AtomicBool>,
+    stream: UnixStream,
+) -> Result<()> {
     stream.set_read_timeout(Some(Duration::new(1, 0)))?;
-    let stream = BufReader::new(stream);
-    for line in stream.lines() {
-        println!("read: {}", line?);
+    let mut stream = BufReader::new(stream);
+    loop {
+        if !is_running.load(Ordering::Relaxed) {
+            return Ok(());
+        }
+        let mut line = String::new();
+        stream.read_line(&mut line)?;
+        is_reading.store(true, Ordering::Relaxed);
     }
-    Ok(())
 }
 
-fn handle_write(is_running: Arc<AtomicBool>, stream: UnixStream) -> Result<()> {
+fn handle_write(
+    is_running: Arc<AtomicBool>,
+    is_reading: Arc<AtomicBool>,
+    stream: UnixStream,
+) -> Result<()> {
     let mut stream = BufWriter::new(stream);
 
     let path = PathBuf::from_str(env!("CARGO_MANIFEST_DIR"))?
         .join("../../src/forth.margorp")
         .canonicalize()?;
+    // TODO: Probably could just poke keyboard buffer memory.
     for c in std::fs::read_to_string(path)?.chars() {
         let c = match c {
             'a'..='z' => c.to_string(),
@@ -88,12 +102,14 @@ fn handle_write(is_running: Arc<AtomicBool>, stream: UnixStream) -> Result<()> {
             '"' => "shift-apostrophe".into(),
             _ => todo!("c: '{c}'"),
         };
-        stream.write_all(format!("sendkey {c} 10\n").as_bytes())?;
+        while !is_reading.load(Ordering::Relaxed) {}
+        is_reading.store(false, Ordering::Relaxed);
+        thread::sleep(Duration::new(0, 2 * 1000000));
+        stream.write_all(format!("sendkey {c} 1\n").as_bytes())?;
         stream.flush()?;
-        thread::sleep(Duration::new(0, 20 * 1000000));
     }
 
-    stream.write_all("sendkey spc\n".as_bytes())?;
+    stream.write_all("sendkey ret\n".as_bytes())?;
     is_running.store(false, Ordering::Relaxed);
     Ok(())
 }
