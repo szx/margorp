@@ -9,6 +9,7 @@
 ; - PAGE_TABLES_ADDR
 ; - kernel code
 ; - forth dictionary
+; - VGA_TEXT_MEM_ADDR
 ; - KEYBOARD_BUFFER_ADDR
 ; - stack at MEM_HIGH_ADDR
 ; Also should read memory map from BIOS.
@@ -28,6 +29,10 @@
 %define PIC2_COMMAND PIC2
 %define PIC2_DATA (PIC2+1)
 %define PIC_EOI 0x20
+
+%define VGA_TEXT_MEM_ADDR 0xb8000
+%define VGA_TEXT_WIDTH 80
+%define VGA_TEXT_HEIGHT 25
 
 %define KEYBOARD_BUFFER_ADDR 0x100000
 %define KEYBOARD_BUFFER_SIZE 0x1000

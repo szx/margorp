@@ -2,16 +2,13 @@
 ; Forth!
 ; --------------------
 
-%define VGA_MEM_ADDR 0xb8000
-%define VGA_TEXT_WIDTH 80
-%define VGA_TEXT_HEIGHT 25
 ; TODO: Change VGA mode from 80x25 text to ???
 
-; rsp: call stack (hardware stack)
-; rbp: parameter stack
-; r15: first argument (caller preserved)
-; r14: second argument (caller preserved)
-; rax, rbx, rcx, rdx: clobbered
+; rsp: call stack (hardware stack) (call-clobbered)
+; rbp: parameter stack (call-clobbered)
+; r15: first argument (call-clobbered)
+; r14: second argument (call-clobbered)
+; rax, rbx, rcx, rdx: (call-clobbered)
 
 %macro push_param 1
     sub rbp, 8
@@ -27,7 +24,6 @@
     call %1 + 9
 %endmacro
 
-
 %define IMMEDIATE 1
 
 
@@ -35,7 +31,6 @@ forth:
     mov rbp, MEM_HIGH_ADDR
 .loop:
     call read_word
-    mov r15, cur_word
     call find_word
     cmp r15, 0
     je .try_parsing_number
@@ -48,7 +43,7 @@ forth:
     call r15
     jmp .loop
 .compile:
-    call emit_call
+    call compile_call
     jmp .loop
 .try_parsing_number:
     mov r15, cur_word
@@ -62,11 +57,11 @@ forth:
     jmp .loop
 .number:
     cmp byte [interpreter_mode], 0
-    jne .emit_number
+    jne .compile_number
 .push_number:
     push_param r15
     jmp .loop
-.emit_number:
+.compile_number:
     push_param r15
     cal _literal
     jmp .loop
@@ -74,7 +69,12 @@ forth:
 error_msg: db 10, ' not found'
 
 print_msg:
-    ; r15: string ptr (len byte + ascii)
+    ; in:
+    ;   r15: string ptr (len byte + ascii)
+    ; uses:
+    ;   rax, rcx, rdi, r8, r15
+    ;   rax, rcx, rsi, rdi, r8 (print_scroll)
+    ; out:
     mov cl, byte [r15]
     inc r15
 .loop:
@@ -86,7 +86,7 @@ print_msg:
     inc r15
     dec cl
     mov r8w, word [print_msg_x]
-    lea edi, [VGA_MEM_ADDR + 2*r8] ; vga memory
+    lea edi, [VGA_TEXT_MEM_ADDR + 2*r8] ; vga memory
     mov ah, 0x1F
     mov word [edi], ax
     inc word [print_msg_x]
@@ -95,6 +95,10 @@ print_msg:
 print_msg_x: dw 0
 
 print_new_line:
+    ; in:
+    ; uses:
+    ;   rax, rcx, rsi, rdi, r8 (print_scroll)
+    ; out:
     mov ax, word [print_msg_x]
     mov cl, VGA_TEXT_WIDTH
     div cl
@@ -106,36 +110,38 @@ print_new_line:
     ret
 
 print_scroll:
+    ; in:
+    ; uses:
+    ;   rax, rcx, rsi, rdi, r8
+    ; out:
     cmp word [print_msg_x], VGA_TEXT_WIDTH * VGA_TEXT_HEIGHT
     jl .end
     mov r8w, word [print_msg_x]
     sub r8w, VGA_TEXT_WIDTH
     mov word [print_msg_x], r8w
     
-    push rsi
-    push rdi
-    push rcx
-    push rax
     cld
-    mov rsi, VGA_MEM_ADDR + 2 * VGA_TEXT_WIDTH
-    mov rdi, VGA_MEM_ADDR
+    mov rsi, VGA_TEXT_MEM_ADDR + 2 * VGA_TEXT_WIDTH
+    mov rdi, VGA_TEXT_MEM_ADDR
     xor rcx, 2 * VGA_TEXT_WIDTH * (VGA_TEXT_HEIGHT - 1)
     rep movsb
-    mov rdi, VGA_MEM_ADDR + 2 * VGA_TEXT_WIDTH * (VGA_TEXT_HEIGHT - 1)
+    mov rdi, VGA_TEXT_MEM_ADDR + 2 * VGA_TEXT_WIDTH * (VGA_TEXT_HEIGHT - 1)
     mov rcx, VGA_TEXT_WIDTH
     mov ax, 0x1F20 ; Set the value to set the screen to: Blue background, white foreground, blank spaces.
     rep stosw
-    pop rax
-    pop rcx
-    pop rdi
-    pop rsi
+
     call print_scroll
 .end:
     ret
 
 %define LEFT_SHIFT_ASCII 1
 read_char:
-    ; return al: char
+    ; read single ASCII char from keybard buffer
+    ; in:
+    ; use:
+    ;   rax, rbx, r12
+    ; out:
+    ;   al: char
     push r12
     push rbx
     mov rsi, scancode_to_ascii
@@ -209,6 +215,12 @@ db 0, 0, 0, 0, 0, 0, 0, 0
 
 read_word:
     ; writes str to cur_word
+    ; in:
+    ; use:
+    ;   r15, rcx
+    ;   rax, rbx, r12 (read_char)
+    ; out:
+    ;   r15: cur_word
     mov r15, cur_word_str
     xor rcx, rcx
 .skip_whitespace:
@@ -223,12 +235,17 @@ read_word:
 	cmp al, 0x20
 	ja .acc_chars
 	mov byte [cur_word], cl
+    mov r15, cur_word
     ret
 
 parse_number:
-    ; r15: word str
-    ; return r15: number
-    ; return ZF: 0 if not a number
+    ; in:
+    ;   r15: word str
+    ; uses:
+    ;   rax, r8, r9, r10, r11, r15
+    ; out:
+    ;   r15: number
+    ;   ZF: 0 if not a number
     xor r8, r8
     mov r8b, byte [r15] ; len
     lea r9, [r15+r8] ; str end
@@ -265,9 +282,13 @@ parse_number:
     ret
 
 find_word:
-    ; r15: word str
-    ; return r15: word address or 0
-    ; return r14: 1 if immediate or 0
+    ; in:
+    ;   r15: word str
+    ; uses:
+    ;   rcx, rsi, rdi, r8, r9, r14, r15
+    ; out:
+    ;   r15: word address or 0
+    ;   r14: 1 if immediate or 0
     xor r14, r14
     xor r8, r8
     mov r8b, byte [r15] ; len
@@ -294,13 +315,33 @@ find_word:
 .fail:
     ret
 
+compile_call:
+    ; in:
+    ;   r15: call addr
+    ; uses:
+    ;   rdi, r15
+    ; out:
+    mov rdi, [rest_of_memory_ptr]
+
+    ; emit mov rax, addr 
+    mov word [rdi], 0xb848
+    add rdi, 2
+    mov qword [rdi], r15
+    add rdi, 8
+    ; emit call rax
+    mov word [rdi], 0xd0ff
+    add rdi, 2
+
+    mov [rest_of_memory_ptr], rdi
+    ret
+
 
 db 'cls'
 db 3
 _cls: dq 0x0
     db 0
     ; Clear vga.
-    mov edi, VGA_MEM_ADDR
+    mov edi, VGA_TEXT_MEM_ADDR
     mov rcx, 4000/8
     mov rax, 0x1F201F201F201F20       ; Set the value to set the screen to: Blue background, white foreground, blank spaces.
     rep stosq
@@ -517,7 +558,6 @@ db 1
 _tick: dq key
     db IMMEDIATE
     call read_word
-    mov r15, cur_word
     call find_word
     ; 0 if not found
     push_param r15
@@ -689,22 +729,6 @@ colon: dq latest
     mov byte [interpreter_mode], 1
     ret
 
-emit_call:
-    ; r15: addr
-    mov rdi, [rest_of_memory_ptr]
-
-    ; emit mov rax, addr 
-    mov word [rdi], 0xb848
-    add rdi, 2
-    mov qword [rdi], r15
-    add rdi, 8
-    ; emit call rax
-    mov word [rdi], 0xd0ff
-    add rdi, 2
-
-    mov [rest_of_memory_ptr], rdi
-    ret
-
 
 db 'literal'
 db 7
@@ -743,7 +767,6 @@ db 8
 _postpone: dq _literal
     db IMMEDIATE
     call read_word
-    mov r15, cur_word
     call find_word
     ; r15: call addr
     ; r14: 1 if immediate or 0
@@ -753,15 +776,15 @@ _postpone: dq _literal
 .compile:
     mov rdi, [rest_of_memory_ptr]
 
-    ; emit mov rbx, call addr
-    mov word [rdi], 0xbb48
+    ; emit mov r15, call addr
+    mov word [rdi], 0xbf49
     add rdi, 2
     mov qword [rdi], r15
     add rdi, 8
     ; emit mov rax, append_call
     mov word [rdi], 0xb848
     add rdi, 2
-    mov qword [rdi], append_call
+    mov qword [rdi], compile_call
     add rdi, 8
     ; emit call rax
     mov word [rdi], 0xd0ff
@@ -771,25 +794,7 @@ _postpone: dq _literal
     ret
 
 .interpret:
-    mov rbx, r15
-    call append_call
-    ret
-
-append_call:
-    ; rbx: call addr
-    
-    mov rdi, [rest_of_memory_ptr]
-
-    ; emit mov rax, addr 
-    mov word [rdi], 0xb848
-    add rdi, 2
-    mov qword [rdi], rbx
-    add rdi, 8
-    ; emit call rax
-    mov word [rdi], 0xd0ff
-    add rdi, 2
-
-    mov [rest_of_memory_ptr], rdi
+    call compile_call
     ret
 
 

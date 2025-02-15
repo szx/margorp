@@ -61,7 +61,17 @@ TODO: : immediate last-word set-immediate
 TODO: Instead of compile-only definitions do it Able Forth way:
     - literals implemented as parsing words # $ % and & for dec, hex, bin and oct respectively.
     - compiler only design like freeforth: words are always compiled, unless backquote at the end
+TODO: Better debugging capabilities:
+    - memory dump hex & ascii, similar to .S
+    - debugger with ability to step through words?
+    - ...
+TODO: Assembler:
+    code ... end-code
+    https://www.bradrodriguez.com/papers/tcjassem.txt
+    http://www.mosaic-industries.com/embedded-systems/legacy-products/qed2-68hc11-microcontroller/software/chapter_13_the_assembler
+
 )
+( TODO: Basic drawing a la Pico-8 )
 
 
 
