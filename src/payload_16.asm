@@ -18,13 +18,9 @@ payload_16:
     ; NOTE: https://wiki.osdev.org/Setting_Up_Long_Mode
     ; NOTE: "Low-Level Programming" by Igor Zhirkov
 
-    ; es:edi    Should point to a valid page-aligned 16KiB buffer, for the PML4, PDPT, PD and a PT.
-    ; ss:esp    Should point to memory that can be used as a small (1 uint32_t) stack
-
-    ; Zero out the 16KiB buffer.
-    ; Since we are doing a rep stosd, count should be bytes/4.
+    ; Temporary stack, will be replaced with LONG_MODE_STACK_ADDR.
+    mov sp, REAL_MODE_STACK_ADDR
     
-    mov sp, STACK_ADDR
     mov di, PAGE_TABLES_ADDR
     mov ecx, 0x1000
     xor eax, eax

@@ -10,6 +10,8 @@
 ; r14: second argument (call-clobbered)
 ; rax, rbx, rcx, rdx: (call-clobbered)
 
+%define PARAM_STACK_ADDR LONG_MODE_STACK_ADDR - LONG_MODE_STACK_SIZE
+
 %macro push_param 1
     sub rbp, 8
     mov qword [rbp], %1
@@ -28,7 +30,7 @@
 
 
 forth:
-    mov rbp, MEM_HIGH_ADDR
+    mov rbp, PARAM_STACK_ADDR
 .loop:
     call read_word
     call find_word
@@ -642,7 +644,7 @@ db 'depth'
 db 5
 _depth: dq _drop
     db 0
-    mov r15, MEM_HIGH_ADDR
+    mov r15, PARAM_STACK_ADDR
     sub r15, rbp
     shr r15, 3
     push_param r15

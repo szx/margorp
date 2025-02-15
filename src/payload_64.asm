@@ -10,6 +10,8 @@ BITS 64
 %define ORGIN 0x700 ; uses ld instead of org 0x700
 
 payload_64:
+    mov rsp, LONG_MODE_STACK_ADDR
+
     call enable_irq
 
     ; TODO: Figure out MMIO using PCI?

@@ -1,17 +1,21 @@
 
-%define STACK_ADDR 0x6000
+%define BOOT_SECTOR_BASE 0x7c00
+%define REAL_MODE_STACK_ADDR BOOT_SECTOR_BASE - 1
 
 %define CODE_SEG 0x8
 %define DATA_SEG 0x10
 
 ; TODO: Sane description of memory map.
 ; Currently it looks something like this:
+; - REAL_MODE_STACK_ADDR
+; - BOOT_SECTOR_BASE
 ; - PAGE_TABLES_ADDR
 ; - kernel code
 ; - forth dictionary
 ; - VGA_TEXT_MEM_ADDR
 ; - KEYBOARD_BUFFER_ADDR
-; - stack at MEM_HIGH_ADDR
+; - LONG_MODE_STACK_ADDR - LONG_MODE_STACK_SIZE
+; - LONG_MODE_STACK_ADDR
 ; Also should read memory map from BIOS.
 
 %define PAGE_SIZE 0x1000
@@ -36,3 +40,6 @@
 
 %define KEYBOARD_BUFFER_ADDR 0x100000
 %define KEYBOARD_BUFFER_SIZE 0x1000
+
+%define LONG_MODE_STACK_SIZE 0x100000
+%define LONG_MODE_STACK_ADDR MEM_HIGH_ADDR
