@@ -5,9 +5,8 @@ trap popd EXIT
 
 bash build.sh
 
-bash qemu_automation.sh &
-
-qemu-system-x86_64 -name "margorp" -monitor unix:/tmp/qemu-monitor-socket,server,nowait -no-reboot -no-shutdown -machine q35           \
+qemu-system-x86_64  -name "margorp" -monitor unix:/tmp/qemu-monitor-socket,server,nowait -S -gdb "tcp::1235" \
+    -no-reboot -no-shutdown -machine q35                            \
     -drive if=none,id=usbstick,format=raw,file=../target/disk.bin   \
     -usb                                                            \
     -device nec-usb-xhci,id=xhci                                    \

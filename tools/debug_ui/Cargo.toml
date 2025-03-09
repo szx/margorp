@@ -1,0 +1,9 @@
+[package]
+name = "debug_ui"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = { workspace = true }
+qemu_automation = { path = "../qemu_automation" }
+eframe = { version = "0.31.0", features = ["default"] }
