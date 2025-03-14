@@ -11,6 +11,7 @@
 ; rax, rbx, rcx, rdx: (call-clobbered)
 
 %define PARAM_STACK_ADDR LONG_MODE_STACK_ADDR - LONG_MODE_STACK_SIZE
+; TODO: Handle stack underflow/overflow (bound stack with unaccesible pages? saturated arithmetic?).
 
 %macro push_param 1
     sub rbp, 8
@@ -435,9 +436,55 @@ _div_mod: dq _mod
     ret
 
 
+db 'rshift'
+db 6
+_rshift: dq _div_mod
+    db 0
+    pop_param rcx
+    pop_param r14
+    shr r14, cl
+    push_param r14
+    ret
+
+
+db 'lshift'
+db 6
+_lshift: dq _rshift
+    db 0
+    pop_param rcx
+    pop_param r14
+    shl r14, cl
+    push_param r14
+    ret
+
+
+db 'max'
+db 3
+_max: dq _lshift
+    db 0
+    pop_param r15
+    pop_param r14
+    cmp r14, r15
+    cmovl r14, r15
+    push_param r14
+    ret
+
+
+db 'min'
+db 3
+_min: dq _max
+    db 0
+    pop_param r15
+    pop_param r14
+    cmp r14, r15
+    cmovg r14, r15
+    push_param r14
+    ret
+
+
 db 'xor'
 db 3
-_xor: dq _div_mod
+_xor: dq _min
     db 0
     pop_param r15
     pop_param r14
@@ -445,17 +492,39 @@ _xor: dq _div_mod
     push_param r14
     ret
 
+db 'and'
+db 3
+_and: dq _xor
+    db 0
+    pop_param r15
+    pop_param r14
+    and r14, r15
+    push_param r14
+    ret
+
 ; logical start
+
+
+db 'invert'
+db 6
+_invert: dq _and
+    db 0
+    pop_param r15
+    not r15
+    push_param r15
+    ret
+
 
 db '='
 db 1
-_eq: dq _xor
+_eq: dq _invert
     db 0
     pop_param r15
     pop_param r14
     xor rax, rax
     cmp r15, r14
-    sete al
+    setne al
+    dec rax ; extend LSB
     push_param rax
     ret
 
@@ -468,7 +537,8 @@ _ne: dq _eq
     pop_param r14
     xor rax, rax
     cmp r15, r14
-    setne al
+    sete al
+    dec rax ; extend LSB
     push_param rax
     ret
 
@@ -481,7 +551,8 @@ _gt: dq _ne
     pop_param r14
     xor rax, rax
     cmp r14, r15
-    setg al
+    setng al
+    dec rax ; extend LSB
     push_param rax
     ret
 
@@ -494,7 +565,8 @@ _lt: dq _gt
     pop_param r14
     xor rax, rax
     cmp r14, r15
-    setl al
+    setnl al
+    dec rax ; extend LSB
     push_param rax
     ret
 
@@ -507,7 +579,8 @@ _le: dq _lt
     pop_param r14
     xor rax, rax
     cmp r14, r15
-    setle al
+    setnle al
+    dec rax ; extend LSB
     push_param rax
     ret
 
@@ -520,7 +593,8 @@ _ge: dq _le
     pop_param r14
     xor rax, rax
     cmp r14, r15
-    setge al
+    setnge al
+    dec rax ; extend LSB
     push_param rax
     ret
 
@@ -672,9 +746,21 @@ r_from: dq to_r
     ret
 
 
+db 'r@'
+db 2
+r_fetch: dq r_from
+    db 0
+    pop r14 ; save return addr
+    pop r15
+    push_param r15
+    push r15
+    push r14 ; restore return addr
+    ret
+
+
 db '@'
 db 1
-fetch: dq r_from
+fetch: dq r_fetch
     db 0
     pop_param r15
     mov rax, [r15]
@@ -718,7 +804,7 @@ colon: dq latest
     add rdi, 1
 
     mov rax, [dictionary]
-    mov [dictionary], rdi
+    push_param rdi ; colon-sys
     mov qword [rdi], rax
     add rdi, 8
     
@@ -840,6 +926,10 @@ semicolon: dq _0branch
     add rdi, 1
     mov [rest_of_memory_ptr], rdi
     
+    ; allow word to be found in the dictionary
+    pop_param rdi ; colon-sys
+    mov [dictionary], rdi
+
     ; switch to execute mode
     mov byte [interpreter_mode], 0
     ret
@@ -880,4 +970,4 @@ cur_word_str: times 0xFF db 0
 interpreter_mode: db 0
 rest_of_memory_ptr: dq rest_of_memory
 
-rest_of_memory:
+rest_of_memory: ; TODO: replace with start of biggest usable memory block

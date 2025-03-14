@@ -8,19 +8,20 @@
 BITS 16
 ; uses ld instead of org 0x500
 payload_16:
-
-    ; TODO: Get memory map from BIOS
-    ; TODO: Get device info from BIOS
-    ; mov ah, 00h
-    ; mov dl, 0x80
-    ; int 13h
-
     ; NOTE: https://wiki.osdev.org/Setting_Up_Long_Mode
     ; NOTE: "Low-Level Programming" by Igor Zhirkov
 
     ; Temporary stack, will be replaced with LONG_MODE_STACK_ADDR.
     mov sp, REAL_MODE_STACK_ADDR
     
+    call query_memory_map_from_bios
+
+    ; TODO: Get device info from BIOS
+    ; mov ah, 00h
+    ; mov dl, 0x80
+    ; int 13h
+
+    ; Setup pages.
     mov di, PAGE_TABLES_ADDR
     mov ecx, 0x1000
     xor eax, eax
@@ -70,6 +71,7 @@ payload_16:
 
     call disable_irq
 
+
     ; NOTE: Intel manual, "10.8.5 Initializing IA-32e Mode"
     ; Enter long mode:
     ; Enable physical-address extensions (PAE) by setting CR4.PAE (bit 5) = 1.
@@ -94,12 +96,51 @@ payload_16:
 
     jmp GDT.Code:long_mode             ; Load CS with 64 bit segment and flush the instruction cache
 
+
+query_memory_map_from_bios:
+    ; Clear E820 memory map
+    mov di, E820_MEMORY_MAP_ADDR
+    mov ecx, E820_MEMORY_MAP_SIZE / 4
+    xor eax, eax
+    cld
+    rep stosd
+    mov di, E820_MEMORY_MAP_ADDR
+
+    ; NOTE: https://github.com/torvalds/linux/blob/master/arch/x86/include/asm/e820/types.h
+    ; base: u64, length: u64, type: u64
+    ; TUTAJ int 0x
+
+    ; es:di - latest entry
+    mov eax, 0xE820 ; Function Code
+	xor ebx, ebx    ; Continuation
+	mov byte [es:di + 23], 1   ; Force ACPI entry
+	mov ecx, 24 ; Entry size
+	mov edx, 'SMAP'; Signature ("SMAP")
+    int 0x15
+    ; TUTAJ check CF
+
+    ; TUTAJ check using seek
+
+    ; TUTAJ map extended memory with INT 0x15, EAX = 0xE820
+    ; TUTAJ https://wiki.osdev.org/Detecting_Memory_(x86)#BIOS_Function:_INT_0x15,_EAX_=_0xE820
+    ; TUTAJ http://www.uruk.org/orig-grub/mem64mb.html
+    ; TUTAJ https://www.cs.cmu.edu/~410-s07/p4/p4-boot.pdf
+    BOOT_LOADER_PRINT msg, msg_len
+    BOOT_LOADER_PRINT msg, msg_len
+    ret
+
+msg:
+  db 'Mem map: (_)!'
+msg_len equ $ - msg
+
+
 disable_irq:
     mov al, 0xFF
     out PIC2_DATA, al
     out PIC1_DATA, al
     lidt [IDT]
     ret
+
 
 ALIGN 4
 IDT:

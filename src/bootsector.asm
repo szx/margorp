@@ -10,7 +10,29 @@ BITS 16
 %define SECTORS 50 ; TODO: Calculate using size
 
 jmp start
-times 128-($-$$) db 90h ; TODO: BIOS parameter block
+times 128-($-$$) db 90h ; TODO: Actual BIOS parameter block
+
+bootloader_print:
+    ; bp: Pointer to string
+    ; cx: Number of characters to write
+    push ds
+    push si
+    push es
+    push di
+    mov ah, 0x13                ; Function: Write string
+    mov al, 0                   ; write mode: don't update cursor
+    mov bh, 0                   ; page number
+    mov bl, 0xf                 ; color: white
+    mov dh, byte [print_row]    ; Row
+    inc byte [print_row]
+    mov dl, 0                   ; Column
+    int 0x10
+    pop di
+    pop es
+    pop si
+    pop ds
+    ret
+print_row: db 0
 
 start:
     mov ax, 0
@@ -107,7 +129,7 @@ check_long_mode:
     mov dword [vendor_id + 8], ecx
     mov bp, vendor_id
     mov cx, 12
-    call print
+    call bootloader_print
 
     mov eax, 0x80000000
     cpuid
@@ -119,6 +141,8 @@ check_long_mode:
     test edx, 1 << 29
     jz err_no_long_mode
     ret
+vendor_id: times 12 db 0
+
 
 check_cpuid:
     ; eax: zero if CPUID not supported
@@ -149,7 +173,7 @@ err_disabled_a20:
 err:
     mov bp, msg
     mov cx, msg_len
-    call print
+    call bootloader_print
 .loop:
     hlt
     jmp .loop
@@ -157,20 +181,5 @@ msg:
   db 'Bootloader error: (_)!'
 msg_len equ $ - msg
 
-print:
-    ; bp: Pointer to string
-    ; cx: Number of characters to write
-    mov ah, 0x13                ; Function: Write string
-    mov al, 0                   ; write mode: don't update cursor
-    mov bh, 0                   ; page number
-    mov bl, 0xf                 ; color: white
-    mov dh, byte [print_row]    ; Row
-    inc byte [print_row]
-    mov dl, 0                   ; Column
-    int 0x10
-    ret
-
-vendor_id: times 12 db 0
-print_row: db 0
 times 510 -( $ - $$ ) db 0
 db 0x55, 0xaa

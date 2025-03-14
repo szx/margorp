@@ -66,7 +66,7 @@ impl eframe::App for App {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("MARGORP debug UI");
-            // HIRO: egui with:
+            // TUTAJ: egui with:
             //       - button to start/stop
             //       - button to start transcription
             //       - text field with interesting buffers

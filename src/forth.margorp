@@ -1,6 +1,7 @@
 cls
 
 : 1+ 1 + ;
+: 1- 1 - ;
 : 0= 0 = ;
 : over >r dup r> swap ;
 : 2dup over over ;
@@ -15,9 +16,10 @@ cls
 
 : constant >r : r> postpone literal postpone ; ;
 : variable here 0 , constant ;
-: marker latest @ : postpone literal postpone latest postpone ! postpone ; ;
+: marker : latest @ postpone literal postpone latest postpone ! postpone ; ;
 
 : compile-only ; immediate
+: ['] postpone ' postpone literal ; immediate compile-only
 
 : branch> here 0 , ;
 : >branch here swap ! ;
@@ -32,6 +34,14 @@ cls
 : until postpone 0branch <branch ; immediate compile-only
 : while postpone 0branch branch> swap ; immediate compile-only
 : repeat postpone branch <branch >branch ; immediate compile-only
+
+: bl 32 ;
+: cr 10 emit ;
+: space bl emit ;
+: char bl begin drop key dup bl > until ;
+: [char] char postpone literal ; immediate compile-only
+: ( begin key [char] ) = until ; immediate
+
 : do
     postpone swap
     postpone begin
@@ -43,18 +53,29 @@ cls
     postpone 1+
     postpone r>
     postpone 2dup
-    postpone =
+    postpone >=
     postpone until
     postpone 2drop
     ; immediate compile-only
 
 
-: bl 32 ;
-: cr 10 emit ;
-: space bl emit ;
-: char bl begin drop key dup bl > until ;
-: [char] char postpone literal ; immediate compile-only
-: ( begin key [char] ) = until ; immediate
+: nop ;
+: then, postpone then ;
+: ?do ( -- do-sys )
+    postpone 2dup
+    postpone =
+    postpone if
+        postpone 2drop 
+    postpone else
+        postpone do ['] then,
+    ; immediate compile-only
+: do ( -- do-sys )
+    postpone do ['] nop
+    ; immediate compile-only
+: loop ( do-sys -- )
+    >r postpone loop r> execute
+    ; immediate compile-only
+
 
 (
 TODO: : immediate last-word set-immediate
@@ -90,8 +111,9 @@ TODO: Assembler:
 variable Tdepth
 variable Tcount
 : test-fail
-    cls
-    Tcount @ .
+    Tcount @ . cr
+    Tdepth @ . cr
+    depth . cr
     bye
     ;
 : T{ ( -- )
@@ -117,6 +139,20 @@ T{ : test 3 if 1111 else 2222 endif ; test }T 1111 ==
 T{ : test 0 begin 1 + dup 5 = until ; test }T 1 2 3 4 5 ==
 T{ : test [char]  ) ; test }T 41 ==
 
+T{ : test 5 0 do 1 loop ; test }T 1 1 1 1 1 ==
+T{ : test 5 2 do 1 loop ; test }T 1 1 1 ==
+T{ : test 5 4 do 1 loop ; test }T 1 ==
+T{ : test 5 5 do 1 loop ; test }T 1 ==
+T{ : test 5 0 ?do 1 loop ; test }T 1 1 1 1 1 ==
+T{ : test 5 2 ?do 1 loop ; test }T 1 1 1 ==
+T{ : test 5 4 ?do 1 loop ; test }T 1 ==
+T{ : test 5 5 ?do 1 loop ; test }T ==
+
+T{ 4 2 rshift }T 1 ==
+T{ 1 2 lshift }T 4 ==
+T{ 1 2 max }T 2 ==
+T{ 1 2 min }T 1 ==
+
 marker -work
 : foo 1 ;
 marker -work
@@ -128,9 +164,12 @@ T{ foo }T 1 ==
 -work
 
 ( arithmetics )
+: false 0 ;
+: true 0 invert ;
+
 : 0> ( n -- b ) 0 > ;
-T{ 1 0> }T 1 ==
-T{ 0 0> }T 0 ==
+T{ 1 0> }T true ==
+T{ 0 0> }T false ==
 
 : 2* ( n -- n*n ) dup + ;
 T{ 123 2* }T 246 ==
@@ -173,6 +212,17 @@ T{ 5 ' 2* execute }T 10 ==
     ;
 
 ( TODO: s" push string )
+
+( print hex by Albert Nijhof )
+: .1hx ( x -- )     
+      15 and
+      9 over < 7 and +
+      [char] 0 + emit ;
+
+: .nhx ( x n -- )
+    1 max 16 min >r
+    r@ 1 ?do dup 4 rshift loop
+    r> 0 do .1hx loop space ;
 
 
 ( SCRATCHPAD BELOW, WILL BE REMOVED )
@@ -230,7 +280,9 @@ drop .S
     then
 ;
 23 3 /check .
-23 0 /check
+23 0 /check .
 
 
 ( ... )
+
+cr 19150 8 .nhx cr
