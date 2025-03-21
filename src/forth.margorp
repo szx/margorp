@@ -83,7 +83,7 @@ TODO: Instead of compile-only definitions do it Able Forth way:
     - literals implemented as parsing words # $ % and & for dec, hex, bin and oct respectively.
     - compiler only design like freeforth: words are always compiled, unless backquote at the end
 TODO: Better debugging capabilities:
-    - memory dump hex & ascii, similar to .S
+    - memory dump hex & ascii, similar to .s
     - debugger with ability to step through words?
     - ...
 TODO: Assembler:
@@ -190,7 +190,7 @@ T{ 5 ' 2* execute }T 10 ==
     drop
     ; immediate compile-only
 
-: .S
+: .s
     ." { "
     depth dup
     begin
@@ -214,23 +214,45 @@ T{ 5 ' 2* execute }T 10 ==
 ( TODO: s" push string )
 
 ( print hex by Albert Nijhof )
-: .1hx ( x -- )     
+: .1$ ( x -- )     
       15 and
       9 over < 7 and +
       [char] 0 + emit ;
 
-: .nhx ( x n -- )
+: .n$ ( x n -- )
     1 max 16 min >r
     r@ 1 ?do dup 4 rshift loop
-    r> 0 do .1hx loop space ;
+    r> 0 do .1$ loop space ;
+
 
 
 ( SCRATCHPAD BELOW, WILL BE REMOVED )
+cls
+
+( OS )
+
+cr 19150 2 .n$ cr
+
+( TODO $7E00 ) 32256 constant E820_MEMORY_MAP_ADDR 
+
+: e820-entry-print
+    dup 16 .n$ space
+    dup @ 16 .n$ space
+    1 cells + dup @ 16 .n$ space
+    1 cells + dup @ dup 8 .n$ space 32 rshift 8 .n$ cr
+    1 cells +
+    ;
+: e820-entries
+    E820_MEMORY_MAP_ADDR @ 32 lshift 32 rshift ( TODO and mask ) dup . cr
+    E820_MEMORY_MAP_ADDR 4 + swap 0 do e820-entry-print loop ;
+
+e820-entries
+
 
 ( Book "Starting FORTH" by Leo Brodie )
 
 ( chapter 1 )
-cls
+
 : star 42 emit ;
 : margin cr 30 spaces ;
 : blip margin star ;
@@ -251,10 +273,10 @@ greet
 : 5#sum + + + + ;
 17 20 132 3 9 5#sum .
 22 4 /mod . .
-10 20 30 40 .S
-drop drop .S
-drop .S
-drop .S
+10 20 30 40 .s
+drop drop .s
+drop .s
+drop .s
 
 ( chapter 3 )
 
@@ -285,4 +307,3 @@ drop .S
 
 ( ... )
 
-cr 19150 8 .nhx cr

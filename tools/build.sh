@@ -17,6 +17,8 @@ ld -Ttext=0x500 --oformat binary -o ../target/payload_16.bin ../target/payload_1
 nasm -o ../target/payload_64.elf -f elf64 -F dwarf -g payload_64.asm
 ld -Ttext=0x700 --oformat binary -o ../target/payload_64.bin ../target/payload_64.elf
 
-cat ../target/bootsector.bin ../target/payload_16.bin ../target/payload_64.bin ../src/forth.margorp > ../target/disk.bin
+printf "\n\0" | tac -rs $'.\\|\n' ../src/forth.margorp - > ../target/forth.margorp
+
+cat ../target/bootsector.bin ../target/payload_16.bin ../target/payload_64.bin ../target/forth.margorp > ../target/disk.bin
 truncate -s1032192 ../target/disk.bin
 

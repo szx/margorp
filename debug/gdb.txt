@@ -10,7 +10,9 @@ target remote localhost:1235
 #br forth
 #br forth.asm:647
 br _magic_breakpoint
-br read_char.keyboard
+br read_char
+br prepare_bootstrap.end
+br query_memory_map_from_bios
 
 focus cmd
 c

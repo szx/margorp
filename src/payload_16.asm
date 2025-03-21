@@ -99,34 +99,58 @@ payload_16:
 
 query_memory_map_from_bios:
     ; Clear E820 memory map
+    pusha
     mov di, E820_MEMORY_MAP_ADDR
     mov ecx, E820_MEMORY_MAP_SIZE / 4
     xor eax, eax
     cld
     rep stosd
     mov di, E820_MEMORY_MAP_ADDR
-
     ; NOTE: https://github.com/torvalds/linux/blob/master/arch/x86/include/asm/e820/types.h
-    ; base: u64, length: u64, type: u64
-    ; TUTAJ int 0x
-
+    ; base: u64, length: u64, type: u32, acpi: u32
     ; es:di - latest entry
-    mov eax, 0xE820 ; Function Code
-	xor ebx, ebx    ; Continuation
-	mov byte [es:di + 23], 1   ; Force ACPI entry
-	mov ecx, 24 ; Entry size
-	mov edx, 'SMAP'; Signature ("SMAP")
+    xor ebp, ebp
+    mov di, E820_MEMORY_MAP_ADDR + 4
+    
+    xor ebx, ebx                ; Continuation
+.loop:
+    mov eax, 0xE820             ; Function Code
+    mov dword [es:di + 20], 1   ; Force ACPI entry
+    mov ecx, 24                 ; Entry size
+    mov edx, 0x0534D4150        ; Signature ("SMAP")
     int 0x15
-    ; TUTAJ check CF
 
-    ; TUTAJ check using seek
+    jc .done
+    cmp eax, 0x0534D4150
+    jne .fail
+    jcxz .skip
 
-    ; TUTAJ map extended memory with INT 0x15, EAX = 0xE820
-    ; TUTAJ https://wiki.osdev.org/Detecting_Memory_(x86)#BIOS_Function:_INT_0x15,_EAX_=_0xE820
-    ; TUTAJ http://www.uruk.org/orig-grub/mem64mb.html
-    ; TUTAJ https://www.cs.cmu.edu/~410-s07/p4/p4-boot.pdf
+    cmp cl, 20
+    jbe .no_acpi
+    test byte [es:di + 20], 1   ; ACPI 3.x ignore bit cleared?
+    jz .skip
+
+.no_acpi:
+.ok:
+    mov ecx, [es:di + 8]
+    or ecx, [es:di + 12]
+    jz .skip                    ; zero length?
+    inc ebp
+    add di, 24
+.skip:
+    test ebx, ebx
+    jne .loop
+.done:
+	mov dword [es:E820_MEMORY_MAP_ADDR], ebp
     BOOT_LOADER_PRINT msg, msg_len
     BOOT_LOADER_PRINT msg, msg_len
+    popa
+    ret
+.fail:
+    mov byte [msg + 10], 'E'
+    BOOT_LOADER_PRINT msg, msg_len
+    jmp $
+    popa
     ret
 
 msg:

@@ -73,6 +73,7 @@ impl State {
         self.write_to_qemu_monitor(&mut stream, &format!("cont\n"))?;
         thread::sleep(Duration::new(1, 0)); // Needs to wait.
 
+        /*
         let path = PathBuf::from_str(env!("CARGO_MANIFEST_DIR"))?
             .join("../../src/forth.margorp")
             .canonicalize()?;
@@ -120,6 +121,7 @@ impl State {
             };
             self.write_to_qemu_monitor(&mut stream, &format!("sendkey {c} 1\n"))?;
         }
+        */
 
         stream.write_all("sendkey ret\n".as_bytes())?;
         self.is_running.store(false, Ordering::Relaxed);

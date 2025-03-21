@@ -11,6 +11,7 @@
 ; rax, rbx, rcx, rdx: (call-clobbered)
 
 %define PARAM_STACK_ADDR LONG_MODE_STACK_ADDR - LONG_MODE_STACK_SIZE
+%define PARAM_STACK_MIN_SIZE 1024 ; Make sure stack doesn't overwrite bootstrap. 
 ; TODO: Handle stack underflow/overflow (bound stack with unaccesible pages? saturated arithmetic?).
 
 %macro push_param 1
@@ -32,6 +33,7 @@
 
 forth:
     mov rbp, PARAM_STACK_ADDR
+    call prepare_bootstrap
 .loop:
     call read_word
     call find_word
@@ -147,6 +149,9 @@ read_char:
     ;   al: char
     push r12
     push rbx
+    cmp qword [read_char_override], 0
+    jne .override
+.keyboard:
     mov rsi, scancode_to_ascii
 .loop:
     xor rbx, rbx
@@ -179,6 +184,18 @@ read_char:
     pop rbx
     pop r12
     ret
+.override:
+    mov rsi, [read_char_override]
+    mov al, byte [rsi]
+    test al, al
+    jz .override_stop
+    inc qword [read_char_override]
+    jmp .end
+.override_stop:
+    mov qword [read_char_override], 0
+    jmp .keyboard
+
+read_char_override: dq 0
 scancode_to_ascii:
 db 0, 0, '1', '2', '3', '4', '5', '6'
 db '7', '8', '9', '0', '-', '=', `\b`, `\t`
@@ -971,3 +988,28 @@ interpreter_mode: db 0
 rest_of_memory_ptr: dq rest_of_memory
 
 rest_of_memory: ; TODO: replace with start of biggest usable memory block
+; Following will be overwritten
+
+prepare_bootstrap:
+    ; copy to FORTH_BOOTSTRAP
+    mov rsi, bootstrap
+    mov rdi, PARAM_STACK_ADDR - PARAM_STACK_MIN_SIZE
+    xor rcx, rcx
+    
+    mov byte [rdi], 0
+    dec rdi
+.loop:    
+    mov al, byte [rsi]
+    mov byte [rdi], al
+    inc rsi
+    dec rdi
+    inc rcx
+    test al, al
+    jnz .loop
+    inc rdi
+    inc rdi
+.end:
+    mov [read_char_override], rdi
+    ret
+
+bootstrap: ; reversed for ease of copying
